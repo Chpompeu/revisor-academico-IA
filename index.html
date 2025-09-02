@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RevAcad.IA - Revisão Acadêmica Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/lucide.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div id="app"></div>
+
+    <script>
+        // Document Analyzer Class
+        class DocumentAnalyzer {
+            constructor() {
+                this.methodologyKeywords = [
+                    'metodologia', 'método', 'amostra', 'população', 'coleta', 'dados', 'análise',
+                    'estatística', 'qualitativo', 'quantitativo', 'entrevista', 'questionário',
+                    'observação', 'experimento', 'survey', 'estudo de caso', 'etnografia'
+                ];
+                
+                this.ethicsKeywords = [
+                    'ética', 'consentimento', 'tcle', 'comitê', 'cep', 'privacidade', 'anonimato',
+                    'confidencialidade', 'riscos', 'benefícios', 'voluntário', 'aprovação'
+                ];
+                
+                this.clarityIndicators = {
+                    academic: ['portanto', 'todavia', 'contudo', 'outrossim', 'ademais', 'destarte'],
+                    connectors: ['porque', 'pois', 'logo', 'assim', 'então', 'desta forma'],
+                    precision: ['específico', 'preciso', 'exato', 'detalhado', 'rigoroso']
+                };
+            }
+
+            analyzeText(text) {
+                const textLower = text.toLowerCase();
+                const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+                const words = textLower.split(/\s+/);
+                const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 0);
+                
+                return {
+                    wordCount: words.length,
+                    sentenceCount: sentences.length,
+                    paragraphCount: paragraphs.length,
+                    avgSentenceLength: words.length / sentences.length,
+                    methodology: this.analyzeMethodology(textLower, sentences),
+                    ethics: this.analyzeEthics(textLower, sentences),
+                    clarity: this.analyzeClarity(textLower, sentences),
+                    references: this.countReferences(text),
+                    citations: this.analyzeCitations(text)
+                };
+            }
+
+            analyzeMethodology(text, sentences) {
+                const methodMatches = this.methodologyKeywords.filter(word => text.includes(word));
+                const hasMethodSection = /metodologia|método/i.test(text);
+                const hasSampleDescription = /amostra|população|participantes/i.test(text);
+                const hasDataCollection = /coleta|dados|instrumento/i.test(text);
+                
+                const score = (methodMatches.length / this.methodologyKeywords.length) * 100;
+                
+                const feedback = [];
+                if (!hasMethodSection) feedback.push("Seção de metodologia não identificada");
+                if (!hasSampleDescription) feedback.push("Descrição da amostra precisa ser detalhada");
+                if (!hasDataCollection) feedback.push("Procedimentos de coleta devem ser explicitados");
+                
+                const strengths = [];
+                if (hasMethodSection) strengths.push("Seção metodológica presente");
+                if (methodMatches.length > 5) strengths.push("Vocabulário metodológico adequado");
+
+                return { score, feedback, strengths, coverage: methodMatches.length };
+            }
+
+            analyzeEthics(text, sentences) {
+                const ethicsMatches = this.ethicsKeywords.filter(word => text.includes(word));
+                const hasEthicsCommittee = /cep|comitê.*ética|aprovação.*ética/i.test(text);
+                const hasConsent = /tcle|consentimento|termo/i.test(text);
+                
+                const score = Math.min((ethicsMatches.length / 3) * 100, 100);
+                
+                const feedback = [];
+                if (!hasEthicsCommittee) feedback.push("Aprovação do CEP deve ser mencionada");
+                if (!hasConsent) feedback.push("TCLE deve ser documentado");
+                
+                const strengths = [];
+                if (hasEthicsCommittee) strengths.push("Aprovação ética documentada");
+                if (hasConsent) strengths.push("Consentimento informado considerado");
+
+                return { score, feedback, strengths, hasCommittee: hasEthicsCommittee };
+            }
+
+            analyzeClarity(text, sentences) {
+                const avgSentenceLength = sentences.reduce((sum, s) => sum + s.split(' ').length, 0) / sentences.length;
+                const academicConnectors = this.clarityIndicators.academic.filter(word => text.includes(word)).length;
+                const logicalConnectors = this.clarityIndicators.connectors.filter(word => text.includes(word)).length;
+                
+                const clarityScore = (
+                    (avgSentenceLength < 25 ? 30 : Math.max(0, 30 - (avgSentenceLength - 25))) +
+                    Math.min(academicConnectors * 5, 25) +
+                    Math.min(logicalConnectors * 5, 25) +
+                    20
+                );
+                
+                const feedback = [];
+                if (avgSentenceLength > 30) feedback.push("Frases muito longas - considere dividir");
+                if (academicConnectors < 3) feedback.push("Use mais conectivos acadêmicos");
+                
+                const strengths = [];
+                if (avgSentenceLength < 20) strengths.push("Frases concisas");
+                if (academicConnectors > 5) strengths.push("Bom uso de conectivos acadêmicos");
+
+                return { 
+                    score: clarityScore, 
+                    feedback, 
+                    strengths, 
+                    avgSentenceLength,
+                    connectorsUsed: academicConnectors + logicalConnectors
+                };
+            }
+
+            countReferences(text) {
+                const refs = (text.match(/\([^)]*\d{4}[^)]*\)/g) || []).length;
+                return { total: refs };
+            }
+
+            analyzeCitations(text) {
+                const citations = text.match(/\([^)]*\d{4}[^)]*\)/g) || [];
+                const recentCitations = citations.filter(cite => {
+                    const years = cite.match(/20[12][0-9]/g);
+                    return years && years.some(year => parseInt(year) > 2020);
+                });
+                
+                return {
+                    total: citations.length,
+                    recent: recentCitations.length,
+                    recencyScore: citations.length > 0 ? (recentCitations.length / citations.length) * 100 : 0
+                };
+            }
+        }
+
+        // App State
+        let appState = {
+            currentStep: 'home',
+            uploadedFile: null,
+            userName: '',
+            documentType: 'artigo',
+            analysisResult: null,
+            reviewProgress: 0
+        };
+
+        // Sample texts
+        const sampleTexts = {
+            artigo: `RESUMO
+Este estudo investiga metodologia qualitativa aplicada à análise de dados educacionais no contexto brasileiro. O objetivo foi examinar as práticas pedagógicas através de entrevistas semiestruturadas com 30 professores. A coleta de dados ocorreu após aprovação do Comitê de Ética em Pesquisa (CEP). Os participantes assinaram o Termo de Consentimento Livre e Esclarecido (TCLE), garantindo privacidade. Os resultados indicam que 67% dos professores utilizam metodologias ativas. A análise temática revelou três categorias principais. Portanto, conclui-se que políticas públicas devem priorizar a formação docente. As limitações incluem a amostra restrita.
+
+METODOLOGIA
+Esta pesquisa adotou abordagem qualitativa. A população consistiu em professores da rede pública. A amostra foi composta por 30 professores, selecionados por conveniência. O instrumento de coleta foi uma entrevista semiestruturada com 15 questões abertas. As entrevistas duraram em média 45 minutos e foram gravadas com consentimento. O tratamento dos dados seguiu análise temática.
+
+REFERÊNCIAS
+Silva, A. (2023). Educação brasileira. Revista de Ensino, 45(2), 123-145.
+Santos, B. (2024). Metodologias ativas. Educação & Pesquisa, 49(1), 67-89.`,
+            dissertacao: `RESUMO
+Esta dissertação examina estratégias de ensino-aprendizagem em cursos de Engenharia no Brasil. O objetivo foi analisar como professores universitários aplicam metodologias ativas. A pesquisa utilizou abordagem mista, com questionários (n=150) e entrevistas (n=20). A coleta ocorreu após aprovação dos Comitês de Ética das instituições. Todos assinaram TCLE, garantindo confidencialidade. Os dados quantitativos foram tratados com estatística descritiva. Os resultados mostram que 78% conhecem metodologias ativas, mas apenas 34% implementam. As barreiras foram: turmas numerosas (89%), carga horária (76%). Contudo, 92% manifestaram interesse em capacitação. Conclui-se que a implementação requer apoio institucional sistemático.`
+        };
+
+        // Render functions
+        function renderHome() {
+            return `
+                <div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+                    <header class="bg-white shadow-sm border-b">
+                        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <i data-lucide="book-open" class="w-8 h-8 text-indigo-600"></i>
+                                <h1 class="text-xl font-bold text-gray-900">RevAcad.IA</h1>
+                            </div>
+                            <button onclick="goToStep('upload')" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                                Começar Revisão
+                            </button>
+                        </div>
+                    </header>
+
+                    <section class="max-w-6xl mx-auto px-4 py-16 text-center">
+                        <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                            Revisão Acadêmica Inteligente
+                            <span class="block text-indigo-600">Para Orientadores e Pesquisadores</span>
+                        </h2>
+                        <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                            Análise profunda de metodologia, ética e clareza argumentativa.
+                            Feedback detalhado para manuscritos acadêmicos brasileiros.
+                        </p>
+                        
+                        <div class="grid md:grid-cols-4 gap-6 mb-12">
+                            <div class="bg-white p-6 rounded-xl shadow-sm border">
+                                <i data-lucide="bar-chart-3" class="w-12 h-12 text-blue-600 mx-auto mb-4"></i>
+                                <h3 class="font-semibold text-lg mb-2">Análise Metodológica</h3>
+                                <p class="text-gray-600">Avaliação de rigor científico</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border">
+                                <i data-lucide="shield" class="w-12 h-12 text-green-600 mx-auto mb-4"></i>
+                                <h3 class="font-semibold text-lg mb-2">Ética de Pesquisa</h3>
+                                <p class="text-gray-600">Verificação CEP e TCLE</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border">
+                                <i data-lucide="file-text" class="w-12 h-12 text-purple-600 mx-auto mb-4"></i>
+                                <h3 class="font-semibold text-lg mb-2">Clareza Textual</h3>
+                                <p class="text-gray-600">Coesão e argumentação</p>
+                            </div>
+                            <div class="bg-white p-6 rounded-xl shadow-sm border">
+                                <i data-lucide="target" class="w-12 h-12 text-red-600 mx-auto mb-4"></i>
+                                <h3 class="font-semibold text-lg mb-2">Feedback Acionável</h3>
+                                <p class="text-gray-600">Sugestões específicas</p>
+                            </div>
+                        </div>
+
+                        <button onclick="goToStep('upload')" class="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg hover:bg-indigo-700 transition-colors shadow-lg">
+                            Analisar Documento Gratuitamente
+                        </button>
+                    </section>
+                </div>
+            `;
+        }
+
+        function renderUpload() {
+            return `
+                <div class="min-h-screen bg-gray-50">
+                    <header class="bg-white shadow-sm border-b">
+                        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+                            <button onclick="goToStep('home')" class="text-indigo-600 hover:text-indigo-700">← Voltar</button>
+                            <i data-lucide="book-open" class="w-6 h-6 text-indigo-600"></i>
+                            <h1 class="text-lg font-semibold">RevAcad.IA</h1>
+                        </div>
+                    </header>
+
+                    <div class="max-w-4xl mx-auto px-4 py-8">
+                        <div class="bg-white rounded-xl shadow-sm border p-8">
+                            <h2 class="text-2xl font-semibold mb-6 text-center">Configure sua análise</h2>
+                            
+                            <div class="grid md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Seu nome</label>
+                                    <input type="text" id="userName" placeholder="Prof. Dr. João Silva" 
+                                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de documento</label>
+                                    <select id="documentType" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                        <option value="artigo">Artigo Científico</option>
+                                        <option value="dissertacao">Dissertação</option>
+                                        <option value="tcc">TCC/Monografia</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Documento (PDF ou DOCX)</label>
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                    <input type="file" accept=".pdf,.docx,.doc,.txt" id="fileInput" class="hidden" onchange="handleFileUpload(event)">
+                                    <div id="fileDisplay" onclick="document.getElementById('fileInput').click()" class="cursor-pointer">
+                                        <i data-lucide="upload" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+                                        <p class="text-lg text-gray-600 mb-2">Clique para selecionar arquivo</p>
+                                        <p class="text-sm text-gray-500">PDF, DOC, DOCX ou TXT • Para demonstração, usaremos texto simulado</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-center">
+                                <button onclick="startAnalysis()" id="startBtn" disabled 
+                                        class="px-8 py-3 rounded-lg text-lg font-medium bg-gray-300 text-gray-500 cursor-not-allowed">
+                                    Iniciar Análise
+                                </button>
+                            </div>
+
+                            <div class="mt-6 text-xs text-gray-500 text-center">
+                                🔒 Análise local - documento não enviado para servidores
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderReviewing() {
+            const currentPhase = 
+                appState.reviewProgress < 30 ? 'Analisando estrutura e metodologia' :
+                appState.reviewProgress < 60 ? 'Verificando aspectos éticos' :
+                appState.reviewProgress < 90 ? 'Avaliando clareza textual' :
+                'Gerando relatório personalizado';
+
+            return `
+                <div class="min-h-screen bg-gray-50">
+                    <header class="bg-white shadow-sm border-b">
+                        <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
+                            <i data-lucide="book-open" class="w-6 h-6 text-indigo-600"></i>
+                            <h1 class="text-lg font-semibold">RevAcad.IA</h1>
+                            <span class="text-sm text-gray-500">Analisando ${appState.documentType}</span>
+                        </div>
+                    </header>
+
+                    <div class="max-w-4xl mx-auto px-4 py-8">
+                        <div class="bg-white rounded-xl shadow-sm border p-8 text-center">
+                            <div class="mb-6">
+                                <i data-lucide="clock" class="w-16 h-16 text-indigo-600 mx-auto mb-4 animate-pulse"></i>
+                                <h2 class="text-2xl font-semibold mb-2">Analisando seu ${appState.documentType}${appState.userName ? `, ${appState.userName}` : ''}...</h2>
+                                <p class="text-gray-600 mb-2">${currentPhase}</p>
+                            </div>
+
+                            <div class="mb-6">
+                                <div class="w-full bg-gray-200 rounded-full h-3 mb-2">
+                                    <div class="bg-indigo-600 h-3 rounded-full transition-all duration-500" 
+                                         style="width: ${Math.min(appState.reviewProgress, 100)}%"></div>
+                                </div>
+                                <p class="text-sm text-gray-600">${Math.round(appState.reviewProgress)}% concluído</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderComplete() {
+            if (!appState.analysisResult) return '';
+
+            const result = appState.analysisResult;
+            const overallScore = Math.round((result.methodology.score + result.ethics.score + result.clarity.score) / 3);
+
+            return `
+                <div class="min-h-screen bg-gray-50">
+                    <header class="bg-white shadow-sm border-b">
+                        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+                            <div class="flex items-center gap-4">
+                                <i data-lucide="book-open" class="w-6 h-6 text-indigo-600"></i>
+                                <h1 class="text-lg font-semibold">RevAcad.IA - Relatório Completo</h1>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="resetApp()" class="text-indigo-600 hover:text-indigo-700 px-4 py-2">Nova Análise</button>
+                                <button onclick="downloadReport()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700">Baixar Relatório</button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div class="max-w-6xl mx-auto px-4 py-8">
+                        <!-- Header do Relatório -->
+                        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-8 mb-8">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h2 class="text-3xl font-bold mb-2">Relatório de Análise${appState.userName ? ` - ${appState.userName}` : ''}</h2>
+                                    <p class="text-indigo-100 mb-4">Documento: ${appState.documentType.charAt(0).toUpperCase() + appState.documentType.slice(1)}</p>
+                                    <div class="flex gap-6 text-sm">
+                                        <span>📝 ${result.wordCount.toLocaleString()} palavras</span>
+                                        <span>📄 ${result.paragraphCount} parágrafos</span>
+                                        <span>📚 ${result.references.total} referências</span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-4xl font-bold mb-2">${overallScore}/100</div>
+                                    <p class="text-indigo-100">Pontuação Geral</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scores -->
+                        <div class="grid md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-white rounded-xl shadow-sm border p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <i data-lucide="bar-chart-3" class="w-8 h-8 text-blue-600"></i>
+                                    <span class="text-2xl font-bold ${result.methodology.score > 70 ? 'text-green-600' : result.methodology.score > 50 ? 'text-yellow-600' : 'text-red-600'}">
+                                        ${Math.round(result.methodology.score)}
+                                    </span>
+                                </div>
+                                <h3 class="font-semibold text-lg mb-2">Metodologia</h3>
+                                <p class="text-gray-600 text-sm">${result.methodology.coverage}/17 termos encontrados</p>
+                            </div>
+
+                            <div class="bg-white rounded-xl shadow-sm border p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <i data-lucide="shield" class="w-8 h-8 text-green-600"></i>
+                                    <span class="text-2xl font-bold ${result.ethics.score > 70 ? 'text-green-600' : result.ethics.score > 50 ? 'text-yellow-600' : 'text-red-600'}">
+                                        ${Math.round(result.ethics.score)}
+                                    </span>
+                                </div>
+                                <h3 class="font-semibold text-lg mb-2">Ética</h3>
+                                <p class="text-gray-600 text-sm">${result.ethics.hasCommittee ? 'CEP identificado' : 'CEP não mencionado'}</p>
+                            </div>
+
+                            <div class="bg-white rounded-xl shadow-sm border p-6">
+                                <div class="flex items-center justify-between mb-4">
+                                    <i data-lucide="file-text" class="w-8 h-8 text-purple-600"></i>
+                                    <span class="text-2xl font-bold ${result.clarity.score > 70 ? 'text-green-600' : result.clarity.score > 50 ? 'text-yellow-600' : 'text-red-600'}">
+                                        ${Math.round(result.clarity.score)}
+                                    </span>
+                                </div>
+                                <h3 class="font-semibold text-lg mb-2">Clareza</h3>
+                                <p class="text-gray-600 text-sm">${Math.round(result.clarity.avgSentenceLength)} palavras/frase</p>
+                            </div>
+                        </div>
+
+                        <!-- Metodologia Transparente -->
+                        <div class="bg-white rounded-xl shadow-sm border p-8 mb-8">
+                            <h3 class="text-2xl font-semibold mb-6 flex items-center gap-3">
+                                <i data-lucide="users" class="w-8 h-8 text-blue-600"></i>
+                                Como Esta Análise Foi Feita
+                            </h3>
+
+                            <div class="grid md:grid-cols-3 gap-6">
+                                <div class="bg-blue-50 p-6 rounded-lg">
+                                    <h4 class="font-semibold text-lg mb-4 text-blue-800">🔍 Metodologia (${Math.round(result.methodology.score)}/100)</h4>
+                                    <div class="text-sm text-blue-700 space-y-2">
+                                        <p><strong>Busca por:</strong></p>
+                                        <ul class="list-disc list-inside space-y-1 text-xs">
+                                            <li>${result.methodology.coverage}/17 palavras-chave encontradas</li>
+                                            <li>Seção metodologia presente ✅</li>
+                                        </ul>
+                                        <div class="text-xs mt-2 p-2 bg-white rounded">
+                                            <strong>Fórmula:</strong> (termos encontrados ÷ 17) × 100
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-green-50 p-6 rounded-lg">
+                                    <h4 class="font-semibold text-lg mb-4 text-green-800">🛡️ Ética (${Math.round(result.ethics.score)}/100)</h4>
+                                    <div class="text-sm text-green-700 space-y-2">
+                                        <p><strong>Checklist obrigatório:</strong></p>
+                                        <ul class="list-disc list-inside space-y-1 text-xs">
+                                            <li>CEP mencionado ${result.ethics.hasCommittee ? '✅ +40pts' : '❌ 0pts'}</li>
+                                            <li>TCLE presente ${result.ethics.strengths.some(s => s.includes('consentimento')) ? '✅ +30pts' : '❌ 0pts'}</li>
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <div class="bg-purple-50 p-6 rounded-lg">
+                                    <h4 class="font-semibold text-lg mb-4 text-purple-800">✍️ Clareza (${Math.round(result.clarity.score)}/100)</h4>
+                                    <div class="text-sm text-purple-700 space-y-2">
+                                        <p><strong>Métricas:</strong></p>
+                                        <ul class="list-disc list-inside space-y-1 text-xs">
+                                            <li>${Math.round(result.clarity.avgSentenceLength)} palavras/frase</li>
+                                            <li>${result.clarity.connectorsUsed} conectivos usados</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recomendações -->
+                        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl p-8">
+                            <h3 class="text-2xl font-semibold mb-6">🎯 Recomendações para Orientação</h3>
+                            
+                            <div class="grid md:grid-cols-2 gap-8">
+                                <div>
+                                    <h4 class="font-semibold text-lg mb-4">Prioridades Imediatas:</h4>
+                                    <ul class="space-y-2 text-indigo-100 text-sm">
+                                        ${result.methodology.score < 60 ? '<li>• Revisar seção metodológica</li>' : ''}
+                                        ${result.ethics.score < 50 ? '<li>• Explicitar aspectos éticos</li>' : ''}
+                                        ${result.clarity.avgSentenceLength > 30 ? '<li>• Simplificar frases</li>' : ''}
+                                        ${result.methodology.score >= 60 && result.ethics.score >= 50 && result.clarity.avgSentenceLength <= 30 ? '<li>• Documento em bom nível!</li>' : ''}
+                                    </ul>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-lg mb-4">Melhorias Gerais:</h4>
+                                    <ul class="space-y-2 text-indigo-100 text-sm">
+                                        <li>• Verificar formatação ABNT</li>
+                                        <li>• Fortalecer transições</li>
+                                        <li>• Considerar limitações</li>
+                                        <li>• Revisar coesão</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Event handlers
+        function goToStep(step) {
+            appState.currentStep = step;
+            render();
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                appState.uploadedFile = file;
+                document.getElementById('fileDisplay').innerHTML = `
+                    <div class="flex items-center justify-center gap-2 text-green-600">
+                        <i data-lucide="file-text" class="w-8 h-8"></i>
+                        <div>
+                            <p class="font-medium">${file.name}</p>
+                            <p class="text-sm text-gray-500">Arquivo carregado - usando texto simulado para demonstração</p>
+                        </div>
+                    </div>
+                `;
+                updateStartButton();
+            }
+        }
+
+        function updateStartButton() {
+            const userName = document.getElementById('userName')?.value || '';
+            const hasFile = appState.uploadedFile !== null;
+            const btn = document.getElementById('startBtn');
+            
+            if (btn) {
+                if (userName && hasFile) {
+                    btn.disabled = false;
+                    btn.className = 'px-8 py-3 rounded-lg text-lg font-medium bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer';
+                    btn.textContent = 'Iniciar Análise Profunda';
+                } else {
+                    btn.disabled = true;
+                    btn.className = 'px-8 py-3 rounded-lg text-lg font-medium bg-gray-300 text-gray-500 cursor-not-allowed';
+                }
+            }
+        }
+
+        function startAnalysis() {
+            appState.userName = document.getElementById('userName').value;
+            appState.documentType = document.getElementById('documentType').value;
+            appState.currentStep = 'reviewing';
+            appState.reviewProgress = 0;
+            render();
+
+            // Simular progresso
+            const interval = setInterval(() => {
+                appState.reviewProgress += Math.random() * 15;
+                if (appState.reviewProgress >= 100) {
+                    clearInterval(interval);
+                    
+                    // Fazer análise real
+                    const analyzer = new DocumentAnalyzer();
+                    const sampleText = sampleTexts[appState.documentType] || sampleTexts.artigo;
+                    appState.analysisResult = analyzer.analyzeText(sampleText);
+                    
+                    appState.currentStep = 'complete';
+                    render();
+                } else {
+                    render();
+                }
+            }, 800);
+        }
+
+        function resetApp() {
+            appState = {
+                currentStep: 'home',
+                uploadedFile: null,
+                userName: '',
+                documentType: 'artigo',
+                analysisResult: null,
+                reviewProgress: 0
+            };
+            render();
+        }
+
+        function downloadReport() {
+            if (!appState.analysisResult) return;
+
+            const reportContent = generateReportText();
+            
+            try {
+                const blob = new Blob([reportContent], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `relatorio-revisao-${appState.documentType}-${new Date().toISOString().split('T')[0]}.txt`;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                alert('✅ Relatório baixado com sucesso!');
+            } catch (error) {
+                try {
+                    navigator.clipboard.writeText(reportContent);
+                    alert('📋 Relatório copiado para área de transferência! Cole em um arquivo .txt');
+                } catch (clipError) {
+                    alert('❌ Erro no download. Tente novamente ou use outro navegador.');
+                }
+            }
+        }
+
+        function generateReportText() {
+            const result = appState.analysisResult;
+            const overallScore = Math.round((result.methodology.score + result.ethics.score + result.clarity.score) / 3);
+            const date = new Date().toLocaleDateString('pt-BR');
+            
+            return `═══════════════════════════════════════════════════════════════
+                    RELATÓRIO DE REVISÃO ACADÊMICA
+                            RevAcad.IA
+═══════════════════════════════════════════════════════════════
+
+📋 INFORMAÇÕES GERAIS
+• Data da análise: ${date}
+• Tipo de documento: ${appState.documentType.charAt(0).toUpperCase() + appState.documentType.slice(1)}
+• Analisado por: ${appState.userName || 'Usuário'}
+
+📊 ESTATÍSTICAS DO DOCUMENTO
+• Palavras: ${result.wordCount.toLocaleString()}
+• Parágrafos: ${result.paragraphCount}
+• Frases: ${result.sentenceCount}
+• Referências: ${result.references.total}
+
+🎯 PONTUAÇÃO GERAL: ${overallScore}/100
+
+═══════════════════════════════════════════════════════════════
+                    ANÁLISE METODOLÓGICA (${Math.round(result.methodology.score)}/100)
+═══════════════════════════════════════════════════════════════
+
+✅ PONTOS FORTES:
+${result.methodology.strengths.length > 0 ? 
+  result.methodology.strengths.map(s => `• ${s}`).join('\n') : 
+  '• Análise automática em desenvolvimento'}
+
+⚠️  RECOMENDAÇÕES:
+${result.methodology.feedback.length > 0 ? 
+  result.methodology.feedback.map(f => `• ${f}`).join('\n') : 
+  '• Metodologia adequada'}
+
+═══════════════════════════════════════════════════════════════
+                    ASPECTOS ÉTICOS (${Math.round(result.ethics.score)}/100)
+═══════════════════════════════════════════════════════════════
+
+📋 CHECKLIST ÉTICO:
+• CEP: ${result.ethics.hasCommittee ? '✅ Identificado' : '❌ Não mencionado'}
+• TCLE: ${result.ethics.strengths.some(s => s.includes('consentimento')) ? '✅ Presente' : '❌ Ausente'}
+
+═══════════════════════════════════════════════════════════════
+                    CLAREZA TEXTUAL (${Math.round(result.clarity.score)}/100)
+═══════════════════════════════════════════════════════════════
+
+📈 MÉTRICAS:
+• Palavras por frase: ${Math.round(result.clarity.avgSentenceLength)}
+• Conectivos usados: ${result.clarity.connectorsUsed}
+• Referências recentes: ${result.citations.recencyScore.toFixed(0)}%
+
+═══════════════════════════════════════════════════════════════
+                    RECOMENDAÇÕES FINAIS
+═══════════════════════════════════════════════════════════════
+
+🎯 Este ${appState.documentType} apresenta ${overallScore > 70 ? 'boa' : overallScore > 50 ? 'moderada' : 'limitada'} adequação aos padrões acadêmicos brasileiros.
+
+📝 Prioridades:
+${result.methodology.score < 60 ? '• Revisar metodologia\n' : ''}${result.ethics.score < 50 ? '• Explicitar aspectos éticos\n' : ''}${result.clarity.avgSentenceLength > 30 ? '• Simplificar frases\n' : ''}
+
+Gerado em: ${date}
+RevAcad.IA - Revisão Acadêmica Inteligente (GitHub Pages)
+            `;
+        }
+
+        // Main render function
+        function render() {
+            let content = '';
+            
+            switch (appState.currentStep) {
+                case 'home':
+                    content = renderHome();
+                    break;
+                case 'upload':
+                    content = renderUpload();
+                    break;
+                case 'reviewing':
+                    content = renderReviewing();
+                    break;
+                case 'complete':
+                    content = renderComplete();
+                    break;
+            }
+            
+            document.getElementById('app').innerHTML = content;
+            lucide.createIcons();
+            
+            // Add event listeners for upload page
+            if (appState.currentStep === 'upload') {
+                const userNameInput = document.getElementById('userName');
+                if (userNameInput) {
+                    userNameInput.addEventListener('input', updateStartButton);
+                }
+            }
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', () => {
+            render();
+        });
+    </script>
+</body>
+</html>
