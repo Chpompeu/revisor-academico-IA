@@ -411,37 +411,168 @@ Esta dissertação examina estratégias de ensino-aprendizagem em cursos de Enge
                             <div class="grid md:grid-cols-3 gap-6">
                                 <div class="bg-blue-50 p-6 rounded-lg">
                                     <h4 class="font-semibold text-lg mb-4 text-blue-800">🔍 Metodologia (${Math.round(result.methodology.score)}/100)</h4>
-                                    <div class="text-sm text-blue-700 space-y-2">
-                                        <p><strong>Busca por:</strong></p>
-                                        <ul class="list-disc list-inside space-y-1 text-xs">
-                                            <li>${result.methodology.coverage}/17 palavras-chave encontradas</li>
-                                            <li>Seção metodologia presente ✅</li>
-                                        </ul>
-                                        <div class="text-xs mt-2 p-2 bg-white rounded">
-                                            <strong>Fórmula:</strong> (termos encontrados ÷ 17) × 100
+                                    <div class="text-sm text-blue-700 space-y-3">
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-blue-400">
+                                            <p class="font-medium mb-2">📊 O que analisamos:</p>
+                                            <p class="text-xs mb-2"><strong>${result.methodology.coverage}/17 termos metodológicos encontrados</strong></p>
+                                            
+                                            <details class="text-xs">
+                                                <summary class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">📋 Ver lista completa dos 17 termos</summary>
+                                                <div class="mt-2 p-2 bg-blue-50 rounded grid grid-cols-2 gap-1">
+                                                    <span>• metodologia</span><span>• método</span>
+                                                    <span>• amostra</span><span>• população</span>
+                                                    <span>• coleta</span><span>• dados</span>
+                                                    <span>• análise</span><span>• estatística</span>
+                                                    <span>• qualitativo</span><span>• quantitativo</span>
+                                                    <span>• entrevista</span><span>• questionário</span>
+                                                    <span>• observação</span><span>• experimento</span>
+                                                    <span>• survey</span><span>• estudo de caso</span>
+                                                    <span>• etnografia</span>
+                                                </div>
+                                            </details>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-green-400">
+                                            <p class="font-medium mb-1">🎯 Por que isso importa:</p>
+                                            <p class="text-xs">Um trabalho científico DEVE explicar claramente seus métodos. Sem isso:</p>
+                                            <ul class="text-xs mt-1 space-y-1">
+                                                <li>❌ Outros não podem replicar a pesquisa</li>
+                                                <li>❌ Revistas científicas rejeitam</li>
+                                                <li>❌ Bancas questionam a validade</li>
+                                                <li>✅ Com boa metodologia: trabalho é confiável</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-amber-400">
+                                            <p class="font-medium mb-1">📈 Interpretação da nota:</p>
+                                            <div class="text-xs space-y-1">
+                                                <p>${result.methodology.score > 80 ? '🟢 80-100: Excelente - metodologia bem detalhada' : 
+                                                     result.methodology.score > 60 ? '🟡 60-79: Bom - mas pode melhorar alguns aspectos' :
+                                                     result.methodology.score > 40 ? '🟠 40-59: Regular - faltam detalhes importantes' :
+                                                     '🔴 0-39: Crítico - metodologia insuficiente'}</p>
+                                                <p><strong>Sua nota ${Math.round(result.methodology.score)}:</strong> ${
+                                                    result.methodology.score > 80 ? 'Parabéns! Metodologia muito bem estruturada.' :
+                                                    result.methodology.score > 60 ? 'Boa base, mas revise alguns pontos específicos.' :
+                                                    result.methodology.score > 40 ? 'Precisa de mais detalhamento metodológico.' :
+                                                    'Urgente: reescrever seção metodológica completamente.'
+                                                }</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-xs p-2 bg-white rounded border-dashed border-2 border-blue-300">
+                                            <strong>💡 Fórmula:</strong> (${result.methodology.coverage} termos encontrados ÷ 17 possíveis) × 100 = ${Math.round((result.methodology.coverage/17)*100)}%
                                         </div>
                                     </div>
                                 </div>
 
                                 <div class="bg-green-50 p-6 rounded-lg">
                                     <h4 class="font-semibold text-lg mb-4 text-green-800">🛡️ Ética (${Math.round(result.ethics.score)}/100)</h4>
-                                    <div class="text-sm text-green-700 space-y-2">
-                                        <p><strong>Checklist obrigatório:</strong></p>
-                                        <ul class="list-disc list-inside space-y-1 text-xs">
-                                            <li>CEP mencionado ${result.ethics.hasCommittee ? '✅ +40pts' : '❌ 0pts'}</li>
-                                            <li>TCLE presente ${result.ethics.strengths.some(s => s.includes('consentimento')) ? '✅ +30pts' : '❌ 0pts'}</li>
-                                        </ul>
+                                    <div class="text-sm text-green-700 space-y-3">
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-green-400">
+                                            <p class="font-medium mb-2">🏛️ Checklist Obrigatório no Brasil:</p>
+                                            <div class="space-y-2 text-xs">
+                                                <div class="flex justify-between items-center p-2 ${result.ethics.hasCommittee ? 'bg-green-100' : 'bg-red-100'} rounded">
+                                                    <span><strong>CEP</strong> (Comitê de Ética em Pesquisa)</span>
+                                                    <span class="${result.ethics.hasCommittee ? 'text-green-700' : 'text-red-700'}">${result.ethics.hasCommittee ? '✅ +40pts' : '❌ 0pts'}</span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 ${result.ethics.strengths.some(s => s.includes('consentimento')) ? 'bg-green-100' : 'bg-red-100'} rounded">
+                                                    <span><strong>TCLE</strong> (Termo de Consentimento)</span>
+                                                    <span class="${result.ethics.strengths.some(s => s.includes('consentimento')) ? 'text-green-700' : 'text-red-700'}">${result.ethics.strengths.some(s => s.includes('consentimento')) ? '✅ +30pts' : '❌ 0pts'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-red-400">
+                                            <p class="font-medium mb-1">⚖️ Por que é OBRIGATÓRIO:</p>
+                                            <ul class="text-xs space-y-1">
+                                                <li><strong>CEP:</strong> Lei brasileira exige aprovação para pesquisa com pessoas</li>
+                                                <li><strong>TCLE:</strong> Participante deve saber riscos e pode desistir</li>
+                                                <li><strong>Sem isso:</strong> Trabalho é considerado ANTIÉTICO e é rejeitado</li>
+                                                <li><strong>Resolução CNS 510/2016:</strong> Marco legal brasileiro</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-amber-400">
+                                            <p class="font-medium mb-1">📊 Interpretação da nota:</p>
+                                            <div class="text-xs space-y-1">
+                                                ${result.ethics.score >= 70 ? '<p class="text-green-700">🟢 70-100: Excelente - aspectos éticos bem documentados</p>' :
+                                                  result.ethics.score >= 40 ? '<p class="text-amber-700">🟡 40-69: Regular - alguns aspectos éticos presentes</p>' :
+                                                  '<p class="text-red-700">🔴 0-39: CRÍTICO - aspectos éticos ausentes ou insuficientes</p>'}
+                                                <p><strong>Sua nota ${Math.round(result.ethics.score)}:</strong> ${
+                                                    result.ethics.score >= 70 ? 'Parabéns! Ética bem contemplada.' :
+                                                    result.ethics.score >= 40 ? 'Precisa melhorar documentação ética.' :
+                                                    'URGENTE: Adicionar CEP e TCLE antes de submeter.'
+                                                }</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-xs p-2 bg-white rounded border-dashed border-2 border-green-300">
+                                            <strong>💡 Fórmula:</strong> CEP(${result.ethics.hasCommittee ? '40' : '0'}) + TCLE(${result.ethics.strengths.some(s => s.includes('consentimento')) ? '30' : '0'}) + Privacidade(30) ÷ 3 = ${Math.round(result.ethics.score)}pts
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div class="bg-purple-50 p-6 rounded-lg">
                                     <h4 class="font-semibold text-lg mb-4 text-purple-800">✍️ Clareza (${Math.round(result.clarity.score)}/100)</h4>
-                                    <div class="text-sm text-purple-700 space-y-2">
-                                        <p><strong>Métricas:</strong></p>
-                                        <ul class="list-disc list-inside space-y-1 text-xs">
-                                            <li>${Math.round(result.clarity.avgSentenceLength)} palavras/frase</li>
-                                            <li>${result.clarity.connectorsUsed} conectivos usados</li>
-                                        </ul>
+                                    <div class="text-sm text-purple-700 space-y-3">
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-purple-400">
+                                            <p class="font-medium mb-2">📏 Métricas de Legibilidade:</p>
+                                            <div class="space-y-2 text-xs">
+                                                <div class="flex justify-between items-center p-2 bg-purple-100 rounded">
+                                                    <span><strong>Palavras por frase:</strong> ${Math.round(result.clarity.avgSentenceLength)}</span>
+                                                    <span class="${result.clarity.avgSentenceLength < 20 ? 'text-green-700' : result.clarity.avgSentenceLength < 30 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.clarity.avgSentenceLength < 20 ? '✅ Ideal' : result.clarity.avgSentenceLength < 30 ? '⚠️ OK' : '❌ Muito longo'}
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 bg-purple-100 rounded">
+                                                    <span><strong>Conectivos acadêmicos:</strong> ${result.clarity.connectorsUsed}</span>
+                                                    <span class="${result.clarity.connectorsUsed > 8 ? 'text-green-700' : result.clarity.connectorsUsed > 4 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.clarity.connectorsUsed > 8 ? '✅ Excelente' : result.clarity.connectorsUsed > 4 ? '⚠️ Regular' : '❌ Insuficiente'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-blue-400">
+                                            <p class="font-medium mb-1">🎯 Por que clareza importa:</p>
+                                            <ul class="text-xs space-y-1">
+                                                <li><strong>Frases longas:</strong> Dificultam compreensão, cansam o leitor</li>
+                                                <li><strong>Conectivos:</strong> "Portanto", "todavia", "ademais" dão fluidez acadêmica</li>
+                                                <li><strong>Clareza = Impacto:</strong> Artigo claro é mais citado</li>
+                                                <li><strong>Bancas valorizam:</strong> Texto fluido impressiona avaliadores</li>
+                                            </ul>
+                                        </div>
+                                        
+                                        <div class="p-3 bg-white rounded-lg border-l-4 border-amber-400">
+                                            <p class="font-medium mb-1">📊 Sua pontuação:</p>
+                                            <div class="text-xs space-y-1">
+                                                <p class="font-medium">${Math.round(result.clarity.score)}/100 = ${
+                                                    result.clarity.score > 80 ? '🟢 Excelente clareza textual' :
+                                                    result.clarity.score > 65 ? '🟡 Boa clareza, pequenos ajustes' :
+                                                    result.clarity.score > 45 ? '🟠 Clareza moderada, precisa melhorar' :
+                                                    '🔴 Clareza baixa, requer revisão profunda'
+                                                }</p>
+                                                
+                                                <details class="mt-2">
+                                                    <summary class="cursor-pointer text-purple-600 font-medium">Ver cálculo detalhado</summary>
+                                                    <div class="mt-2 p-2 bg-purple-50 rounded text-xs space-y-1">
+                                                        <p>• Tamanho de frases: ${result.clarity.avgSentenceLength < 25 ? '+30pts' : `+${Math.max(0, 30-(result.clarity.avgSentenceLength-25))}pts`}</p>
+                                                        <p>• Conectivos acadêmicos: +${Math.min(Math.floor(result.clarity.connectorsUsed/2)*5, 25)}pts</p>
+                                                        <p>• Conectivos lógicos: +${Math.min(15, 15)}pts</p>
+                                                        <p>• Linguagem precisa: +20pts</p>
+                                                        <p><strong>Total: ${Math.round(result.clarity.score)}pts</strong></p>
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-xs p-2 bg-white rounded border-dashed border-2 border-purple-300">
+                                            <strong>💡 Dica:</strong> ${
+                                                result.clarity.avgSentenceLength > 30 ? 'Divida frases longas em duas ou três mais curtas.' :
+                                                result.clarity.connectorsUsed < 5 ? 'Use mais "portanto", "ademais", "contudo" para ligar ideias.' :
+                                                'Continue mantendo a clareza textual!'
+                                            }
+                                        </div>
                                     </div>
                                 </div>
                             </div>
