@@ -18,24 +18,66 @@
     <div id="app"></div>
 
     <script>
-        // Document Analyzer Class
+        // Document Analyzer Class - VERSÃO INTELIGENTE
         class DocumentAnalyzer {
             constructor() {
-                this.methodologyKeywords = [
-                    'metodologia', 'método', 'amostra', 'população', 'coleta', 'dados', 'análise',
-                    'estatística', 'qualitativo', 'quantitativo', 'entrevista', 'questionário',
-                    'observação', 'experimento', 'survey', 'estudo de caso', 'etnografia'
-                ];
-                
-                this.ethicsKeywords = [
-                    'ética', 'consentimento', 'tcle', 'comitê', 'cep', 'privacidade', 'anonimato',
-                    'confidencialidade', 'riscos', 'benefícios', 'voluntário', 'aprovação'
-                ];
-                
-                this.clarityIndicators = {
-                    academic: ['portanto', 'todavia', 'contudo', 'outrossim', 'ademais', 'destarte'],
-                    connectors: ['porque', 'pois', 'logo', 'assim', 'então', 'desta forma'],
-                    precision: ['específico', 'preciso', 'exato', 'detalhado', 'rigoroso']
+                // Padrões para detectar metodologia DETALHADA (não só palavras)
+                this.methodologyPatterns = {
+                    researchType: {
+                        qualitative: /pesquisa.*qualitativ|abordagem.*qualitativ|método.*qualitativ|estudo.*qualitativ/i,
+                        quantitative: /pesquisa.*quantitativ|abordagem.*quantitativ|método.*quantitativ|estudo.*quantitativ/i,
+                        mixed: /pesquisa.*mist|abordagem.*mist|método.*mist|quali.*quantitativ/i
+                    },
+                    sampleDetails: {
+                        size: /\d+\s*(participantes|professores|alunos|sujeitos|indivíduos|pessoas|respondentes)/i,
+                        selection: /(amostr.*conveniênci|amostr.*aleatóri|amostr.*estratificad|amostr.*intencional|selecionad.*por)/i,
+                        characteristics: /(idade.*entre|faixa.*etári|escolaridad|experiênci.*de|tempo.*de.*trabalho)/i
+                    },
+                    instruments: {
+                        detailed: /(questionário.*\d+.*quest|entrevista.*\d+.*quest|roteiro.*\d+.*itens|instrumento.*validado)/i,
+                        validated: /(instrumento.*validado|questionário.*validado|escala.*validado|teste.*validado)/i,
+                        pilot: /(teste.*pilot|estudo.*pilot|pré.*test|validação.*prévi)/i
+                    },
+                    procedures: {
+                        detailed: /(coleta.*ocorreu.*entre|duração.*média|local.*da.*coleta|horário.*da.*coleta)/i,
+                        stepByStep: /(primeiro.*passo|segunda.*etapa|procedimento.*seguinte|em.*seguida|posteriormente)/i
+                    },
+                    analysis: {
+                        software: /(spss|r\s|python|nvivo|atlas|excel.*para.*análise)/i,
+                        technique: /(análise.*temática|análise.*de.*conteúdo|estatística.*descritiva|teste.*t|anova|regressão|qui.*quadrado)/i,
+                        detailed: /(análise.*foi.*realizada|dados.*foram.*tratados|procedimento.*de.*análise)/i
+                    }
+                };
+
+                // Padrões para ética DETALHADA
+                this.ethicsPatterns = {
+                    cep: {
+                        detailed: /(cep.*protocolo.*\d+|aprovado.*pelo.*cep.*sob.*\d+|comitê.*ética.*protocolo.*\d+)/i,
+                        basic: /cep|comitê.*ética|aprovação.*ética/i
+                    },
+                    tcle: {
+                        detailed: /(tcle.*foi.*apresentado|participantes.*assinaram.*tcle|termo.*consentimento.*livre.*esclarecido.*foi)/i,
+                        basic: /tcle|termo.*consentimento|consentimento.*livre/i
+                    },
+                    procedures: {
+                        risks: /(riscos.*foram.*explicados|benefícios.*foram.*apresentados|participação.*voluntária)/i,
+                        withdrawal: /(poderiam.*desistir|direito.*de.*retirada|participação.*pode.*ser.*interrompida)/i,
+                        confidentiality: /(dados.*confidenciais|anonimato.*garantido|identidade.*preservada)/i
+                    }
+                };
+
+                // Padrões para clareza REAL
+                this.clarityPatterns = {
+                    transitions: {
+                        logical: /(portanto|assim|desta.*forma|consequentemente|por.*conseguinte)/i,
+                        academic: /(ademais|outrossim|todavia|contudo|entretanto)/i,
+                        sequential: /(primeiramente|em.*seguida|posteriormente|finalmente|por.*fim)/i
+                    },
+                    precision: {
+                        specific: /(especificamente|precisamente|particularmente|detalhadamente)/i,
+                        quantified: /\d+%|\d+.*participantes|\d+.*casos|\d+.*anos/,
+                        technical: /(rigorosamente|sistematicamente|metodicamente)/i
+                    }
                 };
             }
 
@@ -50,78 +92,272 @@
                     sentenceCount: sentences.length,
                     paragraphCount: paragraphs.length,
                     avgSentenceLength: words.length / sentences.length,
-                    methodology: this.analyzeMethodology(textLower, sentences),
-                    ethics: this.analyzeEthics(textLower, sentences),
-                    clarity: this.analyzeClarity(textLower, sentences),
+                    methodology: this.analyzeMethodologyQuality(text, sentences),
+                    ethics: this.analyzeEthicsQuality(text, sentences),
+                    clarity: this.analyzeClarityQuality(text, sentences),
                     references: this.countReferences(text),
                     citations: this.analyzeCitations(text)
                 };
             }
 
-            analyzeMethodology(text, sentences) {
-                const methodMatches = this.methodologyKeywords.filter(word => text.includes(word));
-                const hasMethodSection = /metodologia|método/i.test(text);
-                const hasSampleDescription = /amostra|população|participantes/i.test(text);
-                const hasDataCollection = /coleta|dados|instrumento/i.test(text);
+            analyzeMethodologyQuality(text, sentences) {
+                const score = { total: 0, details: [], issues: [] };
                 
-                const score = (methodMatches.length / this.methodologyKeywords.length) * 100;
+                // 1. Tipo de pesquisa (0-20 pontos)
+                let researchTypeScore = 0;
+                let researchTypeDetail = "";
+                if (this.methodologyPatterns.researchType.qualitative.test(text)) {
+                    researchTypeScore = 20;
+                    researchTypeDetail = "Pesquisa qualitativa claramente identificada";
+                } else if (this.methodologyPatterns.researchType.quantitative.test(text)) {
+                    researchTypeScore = 20;
+                    researchTypeDetail = "Pesquisa quantitativa claramente identificada";
+                } else if (this.methodologyPatterns.researchType.mixed.test(text)) {
+                    researchTypeScore = 20;
+                    researchTypeDetail = "Abordagem mista bem definida";
+                } else {
+                    score.issues.push("Tipo de pesquisa não claramente definido");
+                }
                 
-                const feedback = [];
-                if (!hasMethodSection) feedback.push("Seção de metodologia não identificada");
-                if (!hasSampleDescription) feedback.push("Descrição da amostra precisa ser detalhada");
-                if (!hasDataCollection) feedback.push("Procedimentos de coleta devem ser explicitados");
+                // 2. Amostra detalhada (0-25 pontos)
+                let sampleScore = 0;
+                const sampleDetails = [];
+                if (this.methodologyPatterns.sampleDetails.size.test(text)) {
+                    sampleScore += 10;
+                    sampleDetails.push("Tamanho da amostra especificado");
+                } else {
+                    score.issues.push("Tamanho da amostra não especificado");
+                }
                 
-                const strengths = [];
-                if (hasMethodSection) strengths.push("Seção metodológica presente");
-                if (methodMatches.length > 5) strengths.push("Vocabulário metodológico adequado");
-
-                return { score, feedback, strengths, coverage: methodMatches.length };
+                if (this.methodologyPatterns.sampleDetails.selection.test(text)) {
+                    sampleScore += 8;
+                    sampleDetails.push("Método de seleção da amostra explicado");
+                } else {
+                    score.issues.push("Critérios de seleção da amostra ausentes");
+                }
+                
+                if (this.methodologyPatterns.sampleDetails.characteristics.test(text)) {
+                    sampleScore += 7;
+                    sampleDetails.push("Características da amostra detalhadas");
+                } else {
+                    score.issues.push("Características da amostra não detalhadas");
+                }
+                
+                // 3. Instrumentos (0-25 pontos)
+                let instrumentsScore = 0;
+                const instrumentDetails = [];
+                if (this.methodologyPatterns.instruments.detailed.test(text)) {
+                    instrumentsScore += 15;
+                    instrumentDetails.push("Instrumentos detalhadamente descritos");
+                } else {
+                    score.issues.push("Instrumentos de coleta não detalhados");
+                }
+                
+                if (this.methodologyPatterns.instruments.validated.test(text)) {
+                    instrumentsScore += 10;
+                    instrumentDetails.push("Instrumentos validados utilizados");
+                }
+                
+                // 4. Procedimentos (0-20 pontos)
+                let proceduresScore = 0;
+                const procedureDetails = [];
+                if (this.methodologyPatterns.procedures.detailed.test(text)) {
+                    proceduresScore += 12;
+                    procedureDetails.push("Procedimentos de coleta detalhados");
+                } else {
+                    score.issues.push("Procedimentos de coleta vagos ou ausentes");
+                }
+                
+                if (this.methodologyPatterns.procedures.stepByStep.test(text)) {
+                    proceduresScore += 8;
+                    procedureDetails.push("Sequência de procedimentos clara");
+                }
+                
+                // 5. Análise (0-10 pontos)
+                let analysisScore = 0;
+                const analysisDetails = [];
+                if (this.methodologyPatterns.analysis.technique.test(text)) {
+                    analysisScore += 6;
+                    analysisDetails.push("Técnica de análise especificada");
+                } else {
+                    score.issues.push("Método de análise não especificado");
+                }
+                
+                if (this.methodologyPatterns.analysis.software.test(text)) {
+                    analysisScore += 4;
+                    analysisDetails.push("Software de análise mencionado");
+                }
+                
+                // Cálculo final
+                score.total = researchTypeScore + sampleScore + instrumentsScore + proceduresScore + analysisScore;
+                score.details = [researchTypeDetail, ...sampleDetails, ...instrumentDetails, ...procedureDetails, ...analysisDetails].filter(Boolean);
+                
+                return {
+                    score: score.total,
+                    strengths: score.details,
+                    feedback: score.issues,
+                    breakdown: {
+                        researchType: researchTypeScore,
+                        sample: sampleScore, 
+                        instruments: instrumentsScore,
+                        procedures: proceduresScore,
+                        analysis: analysisScore
+                    }
+                };
             }
 
-            analyzeEthics(text, sentences) {
-                const ethicsMatches = this.ethicsKeywords.filter(word => text.includes(word));
-                const hasEthicsCommittee = /cep|comitê.*ética|aprovação.*ética/i.test(text);
-                const hasConsent = /tcle|consentimento|termo/i.test(text);
+            analyzeEthicsQuality(text, sentences) {
+                const score = { total: 0, details: [], issues: [] };
                 
-                const score = Math.min((ethicsMatches.length / 3) * 100, 100);
+                // 1. CEP (0-40 pontos)
+                let cepScore = 0;
+                if (this.ethicsPatterns.cep.detailed.test(text)) {
+                    cepScore = 40;
+                    score.details.push("Aprovação CEP com protocolo especificado");
+                } else if (this.ethicsPatterns.cep.basic.test(text)) {
+                    cepScore = 20;
+                    score.details.push("CEP mencionado (mas sem detalhes do protocolo)");
+                    score.issues.push("Inclua número do protocolo CEP");
+                } else {
+                    score.issues.push("Aprovação CEP não mencionada - OBRIGATÓRIO no Brasil");
+                }
                 
-                const feedback = [];
-                if (!hasEthicsCommittee) feedback.push("Aprovação do CEP deve ser mencionada");
-                if (!hasConsent) feedback.push("TCLE deve ser documentado");
+                // 2. TCLE (0-30 pontos)
+                let tcleScore = 0;
+                if (this.ethicsPatterns.tcle.detailed.test(text)) {
+                    tcleScore = 30;
+                    score.details.push("TCLE com procedimentos detalhados");
+                } else if (this.ethicsPatterns.tcle.basic.test(text)) {
+                    tcleScore = 15;
+                    score.details.push("TCLE mencionado (mas sem detalhes do processo)");
+                    score.issues.push("Detalhe como o TCLE foi apresentado e assinado");
+                } else {
+                    score.issues.push("TCLE não mencionado - documento obrigatório");
+                }
                 
-                const strengths = [];
-                if (hasEthicsCommittee) strengths.push("Aprovação ética documentada");
-                if (hasConsent) strengths.push("Consentimento informado considerado");
-
-                return { score, feedback, strengths, hasCommittee: hasEthicsCommittee };
+                // 3. Procedimentos éticos (0-30 pontos)
+                let proceduresScore = 0;
+                if (this.ethicsPatterns.procedures.risks.test(text)) {
+                    proceduresScore += 10;
+                    score.details.push("Riscos e benefícios abordados");
+                }
+                if (this.ethicsPatterns.procedures.withdrawal.test(text)) {
+                    proceduresScore += 10;
+                    score.details.push("Direito de retirada mencionado");
+                }
+                if (this.ethicsPatterns.procedures.confidentiality.test(text)) {
+                    proceduresScore += 10;
+                    score.details.push("Confidencialidade garantida");
+                } else {
+                    score.issues.push("Questões de privacidade e anonimato devem ser explicitadas");
+                }
+                
+                score.total = cepScore + tcleScore + proceduresScore;
+                
+                return {
+                    score: score.total,
+                    strengths: score.details,
+                    feedback: score.issues,
+                    hasCommittee: this.ethicsPatterns.cep.basic.test(text),
+                    breakdown: {
+                        cep: cepScore,
+                        tcle: tcleScore,
+                        procedures: proceduresScore
+                    }
+                };
             }
 
-            analyzeClarity(text, sentences) {
+            analyzeClarityQuality(text, sentences) {
+                const score = { total: 0, details: [], issues: [] };
+                
+                // 1. Tamanho das frases (0-25 pontos)
                 const avgSentenceLength = sentences.reduce((sum, s) => sum + s.split(' ').length, 0) / sentences.length;
-                const academicConnectors = this.clarityIndicators.academic.filter(word => text.includes(word)).length;
-                const logicalConnectors = this.clarityIndicators.connectors.filter(word => text.includes(word)).length;
+                let sentenceLengthScore = 0;
+                if (avgSentenceLength < 15) {
+                    sentenceLengthScore = 25;
+                    score.details.push("Frases concisas facilitam leitura");
+                } else if (avgSentenceLength < 25) {
+                    sentenceLengthScore = 20;
+                    score.details.push("Tamanho de frases adequado");
+                } else if (avgSentenceLength < 35) {
+                    sentenceLengthScore = 10;
+                    score.issues.push("Frases um pouco longas - considere dividir algumas");
+                } else {
+                    sentenceLengthScore = 0;
+                    score.issues.push("Frases muito longas prejudicam compreensão");
+                }
                 
-                const clarityScore = (
-                    (avgSentenceLength < 25 ? 30 : Math.max(0, 30 - (avgSentenceLength - 25))) +
-                    Math.min(academicConnectors * 5, 25) +
-                    Math.min(logicalConnectors * 5, 25) +
-                    20
-                );
+                // 2. Transições e conectivos (0-30 pontos)
+                let transitionScore = 0;
+                const logicalTransitions = (text.match(this.clarityPatterns.transitions.logical) || []).length;
+                const academicTransitions = (text.match(this.clarityPatterns.transitions.academic) || []).length;
+                const sequentialTransitions = (text.match(this.clarityPatterns.transitions.sequential) || []).length;
                 
-                const feedback = [];
-                if (avgSentenceLength > 30) feedback.push("Frases muito longas - considere dividir");
-                if (academicConnectors < 3) feedback.push("Use mais conectivos acadêmicos");
+                const totalTransitions = logicalTransitions + academicTransitions + sequentialTransitions;
+                const transitionDensity = totalTransitions / sentences.length * 100;
                 
-                const strengths = [];
-                if (avgSentenceLength < 20) strengths.push("Frases concisas");
-                if (academicConnectors > 5) strengths.push("Bom uso de conectivos acadêmicos");
-
-                return { 
-                    score: clarityScore, 
-                    feedback, 
-                    strengths, 
+                if (transitionDensity > 15) {
+                    transitionScore = 30;
+                    score.details.push("Excelente uso de conectivos e transições");
+                } else if (transitionDensity > 8) {
+                    transitionScore = 20;
+                    score.details.push("Bom uso de conectivos acadêmicos");
+                } else if (transitionDensity > 4) {
+                    transitionScore = 10;
+                    score.issues.push("Adicione mais conectivos para melhor fluidez");
+                } else {
+                    transitionScore = 0;
+                    score.issues.push("Texto carece de conectivos acadêmicos (portanto, ademais, todavia)");
+                }
+                
+                // 3. Precisão e especificidade (0-25 pontos)
+                let precisionScore = 0;
+                const specificTerms = (text.match(this.clarityPatterns.precision.specific) || []).length;
+                const quantifiedInfo = (text.match(this.clarityPatterns.precision.quantified) || []).length;
+                const technicalPrecision = (text.match(this.clarityPatterns.precision.technical) || []).length;
+                
+                const precisionTotal = specificTerms + quantifiedInfo + technicalPrecision;
+                if (precisionTotal > 10) {
+                    precisionScore = 25;
+                    score.details.push("Linguagem precisa e específica");
+                } else if (precisionTotal > 5) {
+                    precisionScore = 15;
+                    score.details.push("Boa precisão terminológica");
+                } else {
+                    precisionScore = 5;
+                    score.issues.push("Use linguagem mais específica e quantificada");
+                }
+                
+                // 4. Densidade informativa (0-20 pontos)
+                const wordsPerSentence = text.split(/\s+/).length / sentences.length;
+                const informationDensity = (specificTerms + quantifiedInfo) / sentences.length;
+                let densityScore = 0;
+                
+                if (informationDensity > 0.3) {
+                    densityScore = 20;
+                    score.details.push("Alta densidade informativa");
+                } else if (informationDensity > 0.15) {
+                    densityScore = 15;
+                    score.details.push("Boa densidade informativa");
+                } else {
+                    densityScore = 5;
+                    score.issues.push("Texto poderia ser mais informativo e menos verboso");
+                }
+                
+                score.total = sentenceLengthScore + transitionScore + precisionScore + densityScore;
+                
+                return {
+                    score: score.total,
+                    strengths: score.details,
+                    feedback: score.issues,
                     avgSentenceLength,
-                    connectorsUsed: academicConnectors + logicalConnectors
+                    connectorsUsed: totalTransitions,
+                    breakdown: {
+                        sentenceLength: sentenceLengthScore,
+                        transitions: transitionScore,
+                        precision: precisionScore,
+                        density: densityScore
+                    }
                 };
             }
 
@@ -158,16 +394,41 @@
         // Sample texts
         const sampleTexts = {
             artigo: `RESUMO
-Este estudo investiga metodologia qualitativa aplicada à análise de dados educacionais no contexto brasileiro. O objetivo foi examinar as práticas pedagógicas através de entrevistas semiestruturadas com 30 professores. A coleta de dados ocorreu após aprovação do Comitê de Ética em Pesquisa (CEP). Os participantes assinaram o Termo de Consentimento Livre e Esclarecido (TCLE), garantindo privacidade. Os resultados indicam que 67% dos professores utilizam metodologias ativas. A análise temática revelou três categorias principais. Portanto, conclui-se que políticas públicas devem priorizar a formação docente. As limitações incluem a amostra restrita.
+Este estudo investigou a aplicação de metodologias ativas no ensino de ciências em escolas públicas brasileiras. O objetivo foi analisar a percepção dos professores sobre essas práticas pedagógicas e identificar os principais desafios enfrentados. A pesquisa utilizou abordagem qualitativa, com amostra de 30 professores de escolas municipais de Recife, selecionados por conveniência. O instrumento de coleta foi uma entrevista semiestruturada com 15 questões abertas sobre práticas pedagógicas, formação docente e recursos disponíveis. A coleta de dados ocorreu entre março e agosto de 2024, após aprovação do Comitê de Ética em Pesquisa da UFPE sob protocolo nº 4.892.123/2024. Todos os participantes assinaram o Termo de Consentimento Livre e Esclarecido, sendo garantidos o anonimato e a confidencialidade dos dados. Os participantes foram informados sobre os riscos mínimos da pesquisa e sobre o direito de desistir a qualquer momento. As entrevistas duraram em média 45 minutos, foram gravadas digitalmente com consentimento e realizadas nas próprias escolas dos participantes. Os dados foram tratados através de análise temática conforme Braun e Clarke (2019), utilizando o software NVivo 12 para codificação. Os resultados indicam que 87% dos professores conhecem metodologias ativas, porém apenas 34% as implementam regularmente. Os principais obstáculos identificados foram: falta de recursos tecnológicos (89%), turmas numerosas (76%), carga horária excessiva (68%) e formação insuficiente (61%). Ademais, verificou-se que professores com mais de 10 anos de experiência apresentam maior resistência às inovações pedagógicas. Contudo, 92% dos participantes manifestaram interesse em programas de capacitação específicos. Portanto, conclui-se que embora haja interesse docente, são necessárias políticas públicas sistêmicas para viabilizar a implementação efetiva de metodologias ativas no contexto investigado.
+
+INTRODUÇÃO
+O cenário educacional brasileiro tem enfrentado desafios significativos na modernização de suas práticas pedagógicas. Segundo dados do IDEB 2023, apenas 31% das escolas públicas brasileiras atingiram as metas estipuladas, evidenciando a necessidade urgente de inovações metodológicas (Brasil, 2023). Nesse contexto, as metodologias ativas emergem como alternativas promissoras para o engajamento estudantil e melhoria dos índices educacionais. Silva et al. (2024) demonstraram que escolas que implementam metodologias ativas sistematicamente apresentam melhoria de 23% no desempenho dos estudantes. Todavia, a literatura nacional ainda carece de estudos específicos sobre a percepção docente acerca dessas práticas inovadoras.
 
 METODOLOGIA
-Esta pesquisa adotou abordagem qualitativa. A população consistiu em professores da rede pública. A amostra foi composta por 30 professores, selecionados por conveniência. O instrumento de coleta foi uma entrevista semiestruturada com 15 questões abertas. As entrevistas duraram em média 45 minutos e foram gravadas com consentimento. O tratamento dos dados seguiu análise temática.
+Esta pesquisa adotou abordagem qualitativa, caracterizada por Creswell (2021) como apropriada para explorar percepções e experiências subjetivas. A população-alvo consistiu em professores da rede municipal de Recife que lecionam disciplinas científicas (Biologia, Física, Química e Matemática). A amostra foi composta por 30 professores, sendo 18 mulheres (60%) e 12 homens (40%), com idades entre 28 e 56 anos (média = 41,3 anos), tempo de magistério variando entre 5 e 32 anos (média = 14,7 anos). Os critérios de inclusão foram: atuar há pelo menos 5 anos no ensino fundamental II, ter graduação completa na área e demonstrar interesse voluntário na participação. Os critérios de exclusão foram: estar em licença médica ou afastamento durante o período de coleta.
+
+O instrumento utilizado foi uma entrevista semiestruturada desenvolvida especificamente para este estudo, contendo 15 questões abertas distribuídas em três dimensões: conhecimento sobre metodologias ativas (5 questões), práticas pedagógicas atuais (6 questões) e desafios enfrentados (4 questões). O roteiro passou por validação de conteúdo com três especialistas em educação, obtendo índice de concordância de 0,89. Um estudo piloto foi realizado com 3 professores para ajustes finais do instrumento.
+
+Os procedimentos de coleta seguiram rigorosamente os preceitos éticos estabelecidos. Primeiro, foi obtida autorização da Secretaria Municipal de Educação. Em seguida, o projeto foi submetido ao Comitê de Ética em Pesquisa da UFPE, obtendo aprovação sob protocolo nº 4.892.123/2024. Os participantes foram contatados pessoalmente, receberam explicações detalhadas sobre objetivos, procedimentos, riscos e benefícios da pesquisa. O Termo de Consentimento Livre e Esclarecido foi apresentado e assinado antes de cada entrevista, garantindo participação voluntária e direito de retirada sem prejuízos. Foi assegurado que as informações seriam utilizadas exclusivamente para fins acadêmicos, com preservação da identidade através de códigos (P1, P2, P3...).
+
+As entrevistas foram realizadas individualmente, em local privativo nas escolas dos participantes, durante horários de planejamento pedagógico, com duração média de 45 minutos (variação: 32-67 minutos). Todas foram gravadas digitalmente através do aplicativo Recorder, mediante autorização expressa dos entrevistados. Posteriormente, as gravações foram transcritas integralmente pelo próprio pesquisador, resultando em 247 páginas de material textual.
+
+Para análise dos dados, foi empregada a análise temática conforme metodologia proposta por Braun e Clarke (2019). O processo envolveu seis fases: familiarização com os dados, geração de códigos iniciais, busca por temas, revisão dos temas, definição e nomenclatura dos temas, e produção do relatório final. A codificação foi realizada através do software NVivo 12, permitindo maior sistematização e rigor analítico. Dois pesquisadores independentes realizaram a codificação inicial, obtendo concordância intercodificadores de 0,84, considerada excelente por Miles e Huberman (2019).
+
+RESULTADOS
+A análise temática revelou seis temas principais relacionados à percepção docente sobre metodologias ativas. Especificamente, 87% dos participantes (n=26) demonstraram conhecimento conceitual sobre metodologias ativas, citando espontaneamente termos como "aprendizagem baseada em problemas", "sala de aula invertida" e "ensino por investigação". Entretanto, apenas 34% (n=10) relataram implementar essas práticas de forma sistemática e planejada.
 
 REFERÊNCIAS
-Silva, A. (2023). Educação brasileira. Revista de Ensino, 45(2), 123-145.
-Santos, B. (2024). Metodologias ativas. Educação & Pesquisa, 49(1), 67-89.`,
+Brasil. Ministério da Educação. (2023). Índice de Desenvolvimento da Educação Básica - IDEB 2023. Brasília: MEC/INEP.
+
+Braun, V., & Clarke, V. (2019). Análise temática reflexiva: um guia prático para pesquisa qualitativa. Revista Psicologia & Sociedade, 31, 1-20.
+
+Creswell, J. W. (2021). Projeto de pesquisa: métodos qualitativo, quantitativo e misto (4ª ed.). Porto Alegre: Artmed.
+
+Miles, M. B., & Huberman, A. M. (2019). Qualitative data analysis: An expanded sourcebook (3rd ed.). Thousand Oaks: SAGE Publications.
+
+Silva, M. A., Costa, R. B., & Santos, J. C. (2024). Metodologias ativas e desempenho estudantil: evidências de escolas brasileiras. Revista Brasileira de Educação, 29(1), 123-145. https://doi.org/10.1590/S1413-24782024000100007`,
+            
             dissertacao: `RESUMO
-Esta dissertação examina estratégias de ensino-aprendizagem em cursos de Engenharia no Brasil. O objetivo foi analisar como professores universitários aplicam metodologias ativas. A pesquisa utilizou abordagem mista, com questionários (n=150) e entrevistas (n=20). A coleta ocorreu após aprovação dos Comitês de Ética das instituições. Todos assinaram TCLE, garantindo confidencialidade. Os dados quantitativos foram tratados com estatística descritiva. Os resultados mostram que 78% conhecem metodologias ativas, mas apenas 34% implementam. As barreiras foram: turmas numerosas (89%), carga horária (76%). Contudo, 92% manifestaram interesse em capacitação. Conclui-se que a implementação requer apoio institucional sistemático.`
+Esta dissertação investigou as estratégias de implementação de metodologias ativas em cursos de Engenharia Civil de universidades públicas brasileiras. O objetivo principal foi analisar os fatores facilitadores e limitadores dessas práticas pedagógicas na perspectiva de docentes e coordenadores. A pesquisa utilizou metodologia mista, combinando abordagem quantitativa através de survey online (n=156 docentes de 12 universidades) e qualitativa mediante entrevistas em profundidade (n=24 participantes). A coleta quantitativa ocorreu entre fevereiro e junho de 2024, utilizando questionário estruturado validado por especialistas. As entrevistas foram realizadas entre julho e outubro de 2024, seguindo roteiro semiestruturado com 18 questões sobre práticas pedagógicas, formação docente e infraestrutura institucional. O estudo foi aprovado pelos Comitês de Ética em Pesquisa de todas as instituições participantes (protocolos nº 5.234.567/2024 a 5.234.578/2024). Os participantes assinaram o Termo de Consentimento Livre e Esclarecido digital (survey) ou presencial (entrevistas), sendo assegurados anonimato, confidencialidade e direito de retirada. Os dados quantitativos foram tratados através de estatística descritiva e inferencial (SPSS 28.0), enquanto os qualitativos seguiram análise de conteúdo categorial temática (NVivo 12). Os resultados quantitativos revelam que 78% dos docentes conhecem metodologias ativas, mas apenas 29% as implementam sistematicamente. Os principais fatores limitadores identificados foram: turmas excessivamente numerosas (média = 67 alunos, 89% dos respondentes), infraestrutura inadequada (laboratórios insuficientes, 84%), carga horária docente elevada (média = 18h/aula semanais, 76%) e formação pedagógica insuficiente (91% nunca participaram de capacitação específica). A análise qualitativa corroborou esses achados, evidenciando quatro categorias temáticas principais: resistência institucional, desafios estruturais, limitações formativas e experiências exitosas. Ademais, identificou-se correlação positiva significativa entre experiência docente e implementação de metodologias ativas (r=0,67, p<0,01). Surpreendentemente, 94% dos participantes manifestaram elevado interesse em programas de capacitação específicos. Portanto, conclui-se que apesar do interesse docente e do reconhecimento da importância das metodologias ativas, barreiras sistêmicas impedem sua implementação efetiva. Recomenda-se políticas institucionais integradas contemplando formação docente continuada, adequação da infraestrutura física e redimensionamento de turmas para viabilizar práticas pedagógicas inovadoras na engenharia brasileira.`,
+            
+            tcc: `RESUMO
+Este trabalho de conclusão de curso analisou o impacto das redes sociais digitais no comportamento de compra de estudantes universitários brasileiros durante o período pós-pandêmico. O objetivo foi identificar as principais plataformas influenciadoras e os mecanismos psicológicos subjacentes às decisões de consumo dessa população específica. A metodologia combinou abordagem quantitativa através de survey online (n=342 estudantes de universidades públicas e privadas de cinco regiões brasileiras) e qualitativa por meio de grupos focais (4 sessões com 6 participantes cada, n=24). A coleta de dados ocorreu entre agosto e novembro de 2024, após aprovação do Comitê de Ética em Pesquisa da instituição sob protocolo nº 3.456.789/2024. Todos os participantes assinaram digitalmente o Termo de Consentimento Livre e Esclarecido, sendo garantidos confidencialidade, anonimato e direito de retirada. Os riscos da pesquisa foram explicados como mínimos, relacionados apenas ao tempo despendido para participação. Os dados quantitativos foram analisados através de estatística descritiva e qui-quadrado (SPSS 26.0), enquanto os qualitativos seguiram análise temática reflexiva. Os resultados indicam que Instagram (78% dos respondentes) e TikTok (65%) são as plataformas mais influentes no comportamento de compra, superando significativamente Facebook (34%) e Twitter (12%). O comportamento de compra mostrou-se predominantemente impulsivo (67% dos casos) e fortemente motivado por influenciadores digitais (89% relataram já ter comprado produtos recomendados). A análise qualitativa revelou três perfis distintos de consumidores: "seguidor de tendências" (45%), caracterizado por alta suscetibilidade a modas; "comprador racional" (32%), que pesquisa preços e avaliações; e "influenciado por promoções" (23%), motivado principalmente por descontos. Ademais, identificou-se que estudantes de cursos de humanas apresentam maior suscetibilidade à influência das redes sociais comparativamente aos de exatas (χ²=15,67, p<0,001). As limitações do estudo incluem amostra concentrada geograficamente na região Sudeste (78% dos participantes) e período de coleta durante retomada pós-pandêmica, podendo haver viés temporal. Conclui-se que as redes sociais exercem influência substancial nas decisões de compra de universitários brasileiros, especialmente através de mecanismos visuais e endorsement de influenciadores. Recomenda-se às empresas direcionar investimentos em marketing digital para Instagram e TikTok, priorizando parcerias com micro-influenciadores para atingir efetivamente esse público-alvo. Estudos longitudinais futuros poderão acompanhar mudanças comportamentais pós-estabilização pandêmica.`
         };
 
         // Render functions
@@ -413,54 +674,69 @@ Esta dissertação examina estratégias de ensino-aprendizagem em cursos de Enge
                                     <h4 class="font-semibold text-lg mb-4 text-blue-800">🔍 Metodologia (${Math.round(result.methodology.score)}/100)</h4>
                                     <div class="text-sm text-blue-700 space-y-3">
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-blue-400">
-                                            <p class="font-medium mb-2">📊 O que analisamos:</p>
-                                            <p class="text-xs mb-2"><strong>${result.methodology.coverage}/17 termos metodológicos encontrados</strong></p>
-                                            
-                                            <details class="text-xs">
-                                                <summary class="cursor-pointer text-blue-600 hover:text-blue-800 font-medium">📋 Ver lista completa dos 17 termos</summary>
-                                                <div class="mt-2 p-2 bg-blue-50 rounded grid grid-cols-2 gap-1">
-                                                    <span>• metodologia</span><span>• método</span>
-                                                    <span>• amostra</span><span>• população</span>
-                                                    <span>• coleta</span><span>• dados</span>
-                                                    <span>• análise</span><span>• estatística</span>
-                                                    <span>• qualitativo</span><span>• quantitativo</span>
-                                                    <span>• entrevista</span><span>• questionário</span>
-                                                    <span>• observação</span><span>• experimento</span>
-                                                    <span>• survey</span><span>• estudo de caso</span>
-                                                    <span>• etnografia</span>
+                                            <p class="font-medium mb-2">🎯 Análise Inteligente por Componente:</p>
+                                            <div class="space-y-2 text-xs">
+                                                <div class="flex justify-between items-center p-2 bg-blue-100 rounded">
+                                                    <span><strong>Tipo de Pesquisa:</strong> ${result.methodology.breakdown.researchType > 15 ? 'Bem definido' : 'Vago ou ausente'}</span>
+                                                    <span class="${result.methodology.breakdown.researchType > 15 ? 'text-green-700' : 'text-red-700'}">
+                                                        ${result.methodology.breakdown.researchType}/20pts
+                                                    </span>
                                                 </div>
-                                            </details>
+                                                <div class="flex justify-between items-center p-2 bg-blue-100 rounded">
+                                                    <span><strong>Amostra Detalhada:</strong> ${result.methodology.breakdown.sample > 15 ? 'Completa' : result.methodology.breakdown.sample > 8 ? 'Parcial' : 'Insuficiente'}</span>
+                                                    <span class="${result.methodology.breakdown.sample > 15 ? 'text-green-700' : result.methodology.breakdown.sample > 8 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.methodology.breakdown.sample}/25pts
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 bg-blue-100 rounded">
+                                                    <span><strong>Instrumentos:</strong> ${result.methodology.breakdown.instruments > 15 ? 'Bem descritos' : result.methodology.breakdown.instruments > 8 ? 'Básicos' : 'Vagos'}</span>
+                                                    <span class="${result.methodology.breakdown.instruments > 15 ? 'text-green-700' : result.methodology.breakdown.instruments > 8 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.methodology.breakdown.instruments}/25pts
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 bg-blue-100 rounded">
+                                                    <span><strong>Procedimentos:</strong> ${result.methodology.breakdown.procedures > 12 ? 'Detalhados' : result.methodology.breakdown.procedures > 6 ? 'Básicos' : 'Insuficientes'}</span>
+                                                    <span class="${result.methodology.breakdown.procedures > 12 ? 'text-green-700' : result.methodology.breakdown.procedures > 6 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.methodology.breakdown.procedures}/20pts
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 bg-blue-100 rounded">
+                                                    <span><strong>Análise de Dados:</strong> ${result.methodology.breakdown.analysis > 6 ? 'Especificada' : 'Vaga'}</span>
+                                                    <span class="${result.methodology.breakdown.analysis > 6 ? 'text-green-700' : 'text-red-700'}">
+                                                        ${result.methodology.breakdown.analysis}/10pts
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                         
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-green-400">
-                                            <p class="font-medium mb-1">🎯 Por que isso importa:</p>
-                                            <p class="text-xs">Um trabalho científico DEVE explicar claramente seus métodos. Sem isso:</p>
-                                            <ul class="text-xs mt-1 space-y-1">
-                                                <li>❌ Outros não podem replicar a pesquisa</li>
-                                                <li>❌ Revistas científicas rejeitam</li>
-                                                <li>❌ Bancas questionam a validade</li>
-                                                <li>✅ Com boa metodologia: trabalho é confiável</li>
+                                            <p class="font-medium mb-1">🎯 O que buscamos:</p>
+                                            <ul class="text-xs space-y-1">
+                                                <li><strong>Não só palavras:</strong> Detalhamento real dos procedimentos</li>
+                                                <li><strong>Replicabilidade:</strong> Outro pesquisador consegue repetir?</li>
+                                                <li><strong>Justificativas:</strong> Por que escolheu esses métodos?</li>
+                                                <li><strong>Rigor científico:</strong> Critérios claros e sistemáticos</li>
                                             </ul>
                                         </div>
                                         
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-amber-400">
-                                            <p class="font-medium mb-1">📈 Interpretação da nota:</p>
+                                            <p class="font-medium mb-1">📊 Sua Avaliação:</p>
                                             <div class="text-xs space-y-1">
-                                                <p>${result.methodology.score > 80 ? '🟢 80-100: Excelente - metodologia bem detalhada' : 
-                                                     result.methodology.score > 60 ? '🟡 60-79: Bom - mas pode melhorar alguns aspectos' :
-                                                     result.methodology.score > 40 ? '🟠 40-59: Regular - faltam detalhes importantes' :
-                                                     '🔴 0-39: Crítico - metodologia insuficiente'}</p>
-                                                <p><strong>Sua nota ${Math.round(result.methodology.score)}:</strong> ${
-                                                    result.methodology.score > 80 ? 'Parabéns! Metodologia muito bem estruturada.' :
-                                                    result.methodology.score > 60 ? 'Boa base, mas revise alguns pontos específicos.' :
-                                                    result.methodology.score > 40 ? 'Precisa de mais detalhamento metodológico.' :
-                                                    'Urgente: reescrever seção metodológica completamente.'
+                                                <p class="font-medium">${Math.round(result.methodology.score)}/100 = ${
+                                                    result.methodology.score > 80 ? '🟢 Excelente - metodologia rigorosa e detalhada' :
+                                                    result.methodology.score > 60 ? '🟡 Boa - alguns aspectos podem ser melhorados' :
+                                                    result.methodology.score > 40 ? '🟠 Regular - faltam detalhes importantes' :
+                                                    '🔴 Crítica - metodologia insuficiente para publicação'
+                                                }</p>
+                                                <p class="mt-2"><strong>Maior fraqueza:</strong> ${
+                                                    result.methodology.breakdown.researchType < 10 ? 'Tipo de pesquisa mal definido' :
+                                                    result.methodology.breakdown.sample < 10 ? 'Amostra não detalhada' :
+                                                    result.methodology.breakdown.instruments < 10 ? 'Instrumentos vagos' :
+                                                    result.methodology.breakdown.procedures < 10 ? 'Procedimentos insuficientes' :
+                                                    result.methodology.breakdown.analysis < 5 ? 'Análise não especificada' :
+                                                    'Continue aprimorando os detalhes'
                                                 }</p>
                                             </div>
-                                        </div>
-                                        
-                                        <div class="text-xs p-2 bg-white rounded border-dashed border-2 border-blue-300">
-                                            <strong>💡 Fórmula:</strong> (${result.methodology.coverage} termos encontrados ÷ 17 possíveis) × 100 = ${Math.round((result.methodology.coverage/17)*100)}%
                                         </div>
                                     </div>
                                 </div>
@@ -469,45 +745,59 @@ Esta dissertação examina estratégias de ensino-aprendizagem em cursos de Enge
                                     <h4 class="font-semibold text-lg mb-4 text-green-800">🛡️ Ética (${Math.round(result.ethics.score)}/100)</h4>
                                     <div class="text-sm text-green-700 space-y-3">
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-green-400">
-                                            <p class="font-medium mb-2">🏛️ Checklist Obrigatório no Brasil:</p>
+                                            <p class="font-medium mb-2">⚖️ Componentes Éticos Avaliados:</p>
                                             <div class="space-y-2 text-xs">
-                                                <div class="flex justify-between items-center p-2 ${result.ethics.hasCommittee ? 'bg-green-100' : 'bg-red-100'} rounded">
-                                                    <span><strong>CEP</strong> (Comitê de Ética em Pesquisa)</span>
-                                                    <span class="${result.ethics.hasCommittee ? 'text-green-700' : 'text-red-700'}">${result.ethics.hasCommittee ? '✅ +40pts' : '❌ 0pts'}</span>
+                                                <div class="flex justify-between items-center p-2 ${result.ethics.breakdown.cep >= 30 ? 'bg-green-100' : result.ethics.breakdown.cep > 0 ? 'bg-yellow-100' : 'bg-red-100'} rounded">
+                                                    <span><strong>CEP (Comitê de Ética):</strong> ${result.ethics.breakdown.cep >= 30 ? 'Com protocolo' : result.ethics.breakdown.cep > 0 ? 'Mencionado' : 'Ausente'}</span>
+                                                    <span class="${result.ethics.breakdown.cep >= 30 ? 'text-green-700' : result.ethics.breakdown.cep > 0 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.ethics.breakdown.cep}/40pts
+                                                    </span>
                                                 </div>
-                                                <div class="flex justify-between items-center p-2 ${result.ethics.strengths.some(s => s.includes('consentimento')) ? 'bg-green-100' : 'bg-red-100'} rounded">
-                                                    <span><strong>TCLE</strong> (Termo de Consentimento)</span>
-                                                    <span class="${result.ethics.strengths.some(s => s.includes('consentimento')) ? 'text-green-700' : 'text-red-700'}">${result.ethics.strengths.some(s => s.includes('consentimento')) ? '✅ +30pts' : '❌ 0pts'}</span>
+                                                <div class="flex justify-between items-center p-2 ${result.ethics.breakdown.tcle >= 20 ? 'bg-green-100' : result.ethics.breakdown.tcle > 0 ? 'bg-yellow-100' : 'bg-red-100'} rounded">
+                                                    <span><strong>TCLE (Termo Consentimento):</strong> ${result.ethics.breakdown.tcle >= 20 ? 'Detalhado' : result.ethics.breakdown.tcle > 0 ? 'Mencionado' : 'Ausente'}</span>
+                                                    <span class="${result.ethics.breakdown.tcle >= 20 ? 'text-green-700' : result.ethics.breakdown.tcle > 0 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.ethics.breakdown.tcle}/30pts
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 ${result.ethics.breakdown.procedures > 20 ? 'bg-green-100' : result.ethics.breakdown.procedures > 10 ? 'bg-yellow-100' : 'bg-red-100'} rounded">
+                                                    <span><strong>Procedimentos Éticos:</strong> ${result.ethics.breakdown.procedures > 20 ? 'Completos' : result.ethics.breakdown.procedures > 10 ? 'Parciais' : 'Insuficientes'}</span>
+                                                    <span class="${result.ethics.breakdown.procedures > 20 ? 'text-green-700' : result.ethics.breakdown.procedures > 10 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.ethics.breakdown.procedures}/30pts
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
                                         
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-red-400">
-                                            <p class="font-medium mb-1">⚖️ Por que é OBRIGATÓRIO:</p>
+                                            <p class="font-medium mb-1">⚖️ Por que é OBRIGATÓRIO no Brasil:</p>
                                             <ul class="text-xs space-y-1">
-                                                <li><strong>CEP:</strong> Lei brasileira exige aprovação para pesquisa com pessoas</li>
-                                                <li><strong>TCLE:</strong> Participante deve saber riscos e pode desistir</li>
-                                                <li><strong>Sem isso:</strong> Trabalho é considerado ANTIÉTICO e é rejeitado</li>
-                                                <li><strong>Resolução CNS 510/2016:</strong> Marco legal brasileiro</li>
+                                                <li><strong>Lei brasileira:</strong> Resolução CNS 510/2016 exige CEP para pesquisa com pessoas</li>
+                                                <li><strong>TCLE obrigatório:</strong> Participante deve saber riscos e pode desistir a qualquer momento</li>
+                                                <li><strong>Sem isso:</strong> Trabalho é considerado ANTIÉTICO e rejeitado por revistas/bancas</li>
+                                                <li><strong>Responsabilidade:</strong> Pesquisador responde legalmente por questões éticas</li>
                                             </ul>
                                         </div>
                                         
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-amber-400">
-                                            <p class="font-medium mb-1">📊 Interpretação da nota:</p>
+                                            <p class="font-medium mb-1">📊 Diagnóstico:</p>
                                             <div class="text-xs space-y-1">
-                                                ${result.ethics.score >= 70 ? '<p class="text-green-700">🟢 70-100: Excelente - aspectos éticos bem documentados</p>' :
-                                                  result.ethics.score >= 40 ? '<p class="text-amber-700">🟡 40-69: Regular - alguns aspectos éticos presentes</p>' :
-                                                  '<p class="text-red-700">🔴 0-39: CRÍTICO - aspectos éticos ausentes ou insuficientes</p>'}
-                                                <p><strong>Sua nota ${Math.round(result.ethics.score)}:</strong> ${
-                                                    result.ethics.score >= 70 ? 'Parabéns! Ética bem contemplada.' :
-                                                    result.ethics.score >= 40 ? 'Precisa melhorar documentação ética.' :
-                                                    'URGENTE: Adicionar CEP e TCLE antes de submeter.'
+                                                <p class="font-medium">${Math.round(result.ethics.score)}/100 = ${
+                                                    result.ethics.score >= 80 ? '🟢 Excelente - aspectos éticos bem documentados' :
+                                                    result.ethics.score >= 60 ? '🟡 Bom - pequenos ajustes necessários' :
+                                                    result.ethics.score >= 40 ? '🟠 Regular - precisa melhorar documentação' :
+                                                    '🔴 CRÍTICO - aspectos éticos ausentes ou inadequados'
+                                                }</p>
+                                                <p class="mt-2"><strong>Ação prioritária:</strong> ${
+                                                    result.ethics.breakdown.cep === 0 ? 'Incluir aprovação CEP com número do protocolo' :
+                                                    result.ethics.breakdown.tcle === 0 ? 'Documentar procedimentos do TCLE detalhadamente' :
+                                                    result.ethics.breakdown.procedures < 15 ? 'Explicitar riscos, benefícios e direito de retirada' :
+                                                    'Verificar se todos os aspectos éticos estão completos'
                                                 }</p>
                                             </div>
                                         </div>
                                         
                                         <div class="text-xs p-2 bg-white rounded border-dashed border-2 border-green-300">
-                                            <strong>💡 Fórmula:</strong> CEP(${result.ethics.hasCommittee ? '40' : '0'}) + TCLE(${result.ethics.strengths.some(s => s.includes('consentimento')) ? '30' : '0'}) + Privacidade(30) ÷ 3 = ${Math.round(result.ethics.score)}pts
+                                            <strong>💡 Fórmula inteligente:</strong> CEP(${result.ethics.breakdown.cep}) + TCLE(${result.ethics.breakdown.tcle}) + Procedimentos(${result.ethics.breakdown.procedures}) = ${Math.round(result.ethics.score)}pts
                                         </div>
                                     </div>
                                 </div>
@@ -516,62 +806,77 @@ Esta dissertação examina estratégias de ensino-aprendizagem em cursos de Enge
                                     <h4 class="font-semibold text-lg mb-4 text-purple-800">✍️ Clareza (${Math.round(result.clarity.score)}/100)</h4>
                                     <div class="text-sm text-purple-700 space-y-3">
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-purple-400">
-                                            <p class="font-medium mb-2">📏 Métricas de Legibilidade:</p>
+                                            <p class="font-medium mb-2">📏 Componentes de Qualidade Textual:</p>
                                             <div class="space-y-2 text-xs">
                                                 <div class="flex justify-between items-center p-2 bg-purple-100 rounded">
-                                                    <span><strong>Palavras por frase:</strong> ${Math.round(result.clarity.avgSentenceLength)}</span>
-                                                    <span class="${result.clarity.avgSentenceLength < 20 ? 'text-green-700' : result.clarity.avgSentenceLength < 30 ? 'text-yellow-700' : 'text-red-700'}">
-                                                        ${result.clarity.avgSentenceLength < 20 ? '✅ Ideal' : result.clarity.avgSentenceLength < 30 ? '⚠️ OK' : '❌ Muito longo'}
+                                                    <span><strong>Tamanho das Frases:</strong> ${Math.round(result.clarity.avgSentenceLength)} palavras ${result.clarity.avgSentenceLength < 20 ? '(Ideal)' : result.clarity.avgSentenceLength < 30 ? '(OK)' : '(Longas)'}</span>
+                                                    <span class="${result.clarity.breakdown.sentenceLength > 20 ? 'text-green-700' : result.clarity.breakdown.sentenceLength > 10 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.clarity.breakdown.sentenceLength}/25pts
                                                     </span>
                                                 </div>
                                                 <div class="flex justify-between items-center p-2 bg-purple-100 rounded">
-                                                    <span><strong>Conectivos acadêmicos:</strong> ${result.clarity.connectorsUsed}</span>
-                                                    <span class="${result.clarity.connectorsUsed > 8 ? 'text-green-700' : result.clarity.connectorsUsed > 4 ? 'text-yellow-700' : 'text-red-700'}">
-                                                        ${result.clarity.connectorsUsed > 8 ? '✅ Excelente' : result.clarity.connectorsUsed > 4 ? '⚠️ Regular' : '❌ Insuficiente'}
+                                                    <span><strong>Conectivos Acadêmicos:</strong> ${result.clarity.connectorsUsed} encontrados ${result.clarity.connectorsUsed > 8 ? '(Ótimo)' : result.clarity.connectorsUsed > 4 ? '(Regular)' : '(Poucos)'}</span>
+                                                    <span class="${result.clarity.breakdown.transitions > 20 ? 'text-green-700' : result.clarity.breakdown.transitions > 10 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.clarity.breakdown.transitions}/30pts
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 bg-purple-100 rounded">
+                                                    <span><strong>Precisão Linguística:</strong> ${result.clarity.breakdown.precision > 20 ? 'Específica' : result.clarity.breakdown.precision > 10 ? 'Moderada' : 'Vaga'}</span>
+                                                    <span class="${result.clarity.breakdown.precision > 20 ? 'text-green-700' : result.clarity.breakdown.precision > 10 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.clarity.breakdown.precision}/25pts
+                                                    </span>
+                                                </div>
+                                                <div class="flex justify-between items-center p-2 bg-purple-100 rounded">
+                                                    <span><strong>Densidade Informativa:</strong> ${result.clarity.breakdown.density > 15 ? 'Rica em informação' : result.clarity.breakdown.density > 10 ? 'Moderada' : 'Verbosa'}</span>
+                                                    <span class="${result.clarity.breakdown.density > 15 ? 'text-green-700' : result.clarity.breakdown.density > 10 ? 'text-yellow-700' : 'text-red-700'}">
+                                                        ${result.clarity.breakdown.density}/20pts
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                         
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-blue-400">
-                                            <p class="font-medium mb-1">🎯 Por que clareza importa:</p>
+                                            <p class="font-medium mb-1">🎯 Por que clareza é crucial na academia:</p>
                                             <ul class="text-xs space-y-1">
-                                                <li><strong>Frases longas:</strong> Dificultam compreensão, cansam o leitor</li>
-                                                <li><strong>Conectivos:</strong> "Portanto", "todavia", "ademais" dão fluidez acadêmica</li>
-                                                <li><strong>Clareza = Impacto:</strong> Artigo claro é mais citado</li>
-                                                <li><strong>Bancas valorizam:</strong> Texto fluido impressiona avaliadores</li>
+                                                <li><strong>Frases curtas:</strong> Facilitam compreensão e reduzem ambiguidade</li>
+                                                <li><strong>Conectivos acadêmicos:</strong> "Ademais", "todavia", "portanto" dão fluidez científica</li>
+                                                <li><strong>Precisão:</strong> Linguagem específica evita interpretações errôneas</li>
+                                                <li><strong>Impacto:</strong> Textos claros são mais citados e bem avaliados</li>
                                             </ul>
                                         </div>
                                         
                                         <div class="p-3 bg-white rounded-lg border-l-4 border-amber-400">
-                                            <p class="font-medium mb-1">📊 Sua pontuação:</p>
+                                            <p class="font-medium mb-1">📊 Diagnóstico da Clareza:</p>
                                             <div class="text-xs space-y-1">
                                                 <p class="font-medium">${Math.round(result.clarity.score)}/100 = ${
-                                                    result.clarity.score > 80 ? '🟢 Excelente clareza textual' :
-                                                    result.clarity.score > 65 ? '🟡 Boa clareza, pequenos ajustes' :
-                                                    result.clarity.score > 45 ? '🟠 Clareza moderada, precisa melhorar' :
-                                                    '🔴 Clareza baixa, requer revisão profunda'
+                                                    result.clarity.score > 85 ? '🟢 Excelente - texto muito claro e fluido' :
+                                                    result.clarity.score > 70 ? '🟡 Bom - pequenos ajustes para melhor fluência' :
+                                                    result.clarity.score > 50 ? '🟠 Regular - clareza comprometida em alguns pontos' :
+                                                    '🔴 Baixa - texto dificulta compreensão, revisão necessária'
+                                                }</p>
+                                                <p class="mt-2"><strong>Principal problema:</strong> ${
+                                                    result.clarity.breakdown.sentenceLength < 10 ? 'Frases muito longas dificultam leitura' :
+                                                    result.clarity.breakdown.transitions < 10 ? 'Faltam conectivos para melhor fluidez' :
+                                                    result.clarity.breakdown.precision < 10 ? 'Linguagem muito vaga, seja mais específico' :
+                                                    result.clarity.breakdown.density < 10 ? 'Texto verboso, condense informações' :
+                                                    'Continue melhorando os detalhes de clareza'
                                                 }</p>
                                                 
                                                 <details class="mt-2">
-                                                    <summary class="cursor-pointer text-purple-600 font-medium">Ver cálculo detalhado</summary>
+                                                    <summary class="cursor-pointer text-purple-600 font-medium">💡 Dicas específicas para melhoria</summary>
                                                     <div class="mt-2 p-2 bg-purple-50 rounded text-xs space-y-1">
-                                                        <p>• Tamanho de frases: ${result.clarity.avgSentenceLength < 25 ? '+30pts' : `+${Math.max(0, 30-(result.clarity.avgSentenceLength-25))}pts`}</p>
-                                                        <p>• Conectivos acadêmicos: +${Math.min(Math.floor(result.clarity.connectorsUsed/2)*5, 25)}pts</p>
-                                                        <p>• Conectivos lógicos: +${Math.min(15, 15)}pts</p>
-                                                        <p>• Linguagem precisa: +20pts</p>
-                                                        <p><strong>Total: ${Math.round(result.clarity.score)}pts</strong></p>
+                                                        ${result.clarity.avgSentenceLength > 30 ? '<p>• Divida frases com mais de 30 palavras em duas ou três</p>' : ''}
+                                                        ${result.clarity.connectorsUsed < 5 ? '<p>• Use mais "ademais", "portanto", "todavia", "contudo"</p>' : ''}
+                                                        ${result.clarity.breakdown.precision < 15 ? '<p>• Substitua termos vagos por específicos ("muitos" → "73%")</p>' : ''}
+                                                        ${result.clarity.breakdown.density < 10 ? '<p>• Elimine palavras desnecessárias, seja mais direto</p>' : ''}
+                                                        <p>• Leia em voz alta - se ficar sem fôlego, a frase está longa</p>
                                                     </div>
                                                 </details>
                                             </div>
                                         </div>
                                         
                                         <div class="text-xs p-2 bg-white rounded border-dashed border-2 border-purple-300">
-                                            <strong>💡 Dica:</strong> ${
-                                                result.clarity.avgSentenceLength > 30 ? 'Divida frases longas em duas ou três mais curtas.' :
-                                                result.clarity.connectorsUsed < 5 ? 'Use mais "portanto", "ademais", "contudo" para ligar ideias.' :
-                                                'Continue mantendo a clareza textual!'
-                                            }
+                                            <strong>💡 Fórmula:</strong> Frases(${result.clarity.breakdown.sentenceLength}) + Conectivos(${result.clarity.breakdown.transitions}) + Precisão(${result.clarity.breakdown.precision}) + Densidade(${result.clarity.breakdown.density}) = ${Math.round(result.clarity.score)}pts
                                         </div>
                                     </div>
                                 </div>
